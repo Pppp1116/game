@@ -1,10 +1,14 @@
 use raylib::ffi::Vector2;
 
-use crate::{soldiers::Weapon, traits::WorldObject};
+use crate::{
+    soldiers::Weapon,
+    traits::{Movable, WorldObject},
+    world::Collection,
+};
 
 pub(crate) struct Projectile {
-    position: Vector2,
-    velocity: Vector2,
+    pub position: Vector2,
+    pub velocity: Vector2,
     wepond: Weapon,
 }
 const PROJECTILE_SPEED: f32 = 32.0;
@@ -25,7 +29,13 @@ impl Projectile {
     }
 }
 impl WorldObject for Projectile {
-    fn storage(world: &mut crate::world::World) -> &mut Vec<Self> {
+    fn storage(world: &mut crate::world::World) -> &mut Collection<Self> {
         &mut world.projectiles
+    }
+}
+
+impl Movable for Projectile {
+    fn move_by(&mut self, ammount: Vector2) {
+        self.position += ammount;
     }
 }

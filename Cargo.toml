@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 raylib = "6.0.0"
+smallvec = "1.16.3"

@@ -1,10 +1,10 @@
-use std::time::{Duration, Instant};
-
+use crate::world::{Collection, World};
 use crate::{
     health::Health,
-    traits::{Armed, Draw, Movable, TakeDamage},
+    traits::{Armed, Draw, Movable, TakeDamage, WorldObject},
 };
 use raylib::prelude::*;
+use std::time::{Duration, Instant};
 
 enum SoldierState {
     Fighthing,
@@ -19,6 +19,11 @@ pub struct Soldier {
     gun: Weapon,
     state: SoldierState,
 }
+impl WorldObject for Soldier {
+    fn storage(world: &mut World) -> &mut Collection<Self> {
+        &mut world.soldiers
+    }
+}
 
 #[derive(Clone)]
 pub enum Weapon {
@@ -32,7 +37,7 @@ pub enum Weapon {
         reatch: f32,
         radius: f32,
         damage: f32,
-        last_send: Instant,
+        last_shot: Instant,
         fire_interval: Duration,
     },
 }
@@ -51,7 +56,7 @@ impl Weapon {
         match self {
             Weapon::Grenade {
                 fire_interval,
-                last_send,
+                last_shot: last_send,
                 ..
             } => last_send.elapsed() >= *fire_interval,
             Weapon::Gun {
@@ -62,6 +67,7 @@ impl Weapon {
         }
     }
 }
+impl Movable for Weapon {}
 
 impl Draw for Soldier {
     fn draw(&self, d: &mut RaylibDrawHandle<'_>) {
@@ -86,11 +92,8 @@ impl Armed for Soldier {
     fn weapon(&self) -> &Weapon {
         &self.gun
     }
-}
-impl Soldier {
-    fn shoot<T: TakeDamage>(&mut self, target: &mut T) {
-        let health = target.health();
-        health.current = (health.current - *self.gun.damage()).max(0.0);
+    fn mut_weapon(&mut self) -> &mut Weapon {
+        &mut self.gun
     }
 }
 
