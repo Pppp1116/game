@@ -4,16 +4,17 @@ use crate::{
     projectile::{self, Projectile},
     soldiers::{Soldier, Weapon},
     traits::{TakeDamage, WorldObject},
+    world::{Collection, World},
 };
 
 #[derive(Clone, Debug)]
-enum Inhabitants {
+pub(crate) enum Inhabitants {
     Soldiers(usize),
     Pojectiles(usize),
 }
 
 #[derive(Default, Clone)]
-struct Cell {
+pub(crate) struct Cell {
     habitants: Vec<Inhabitants>,
 }
 
@@ -35,8 +36,22 @@ impl<'a> IntoIterator for &'a mut Cell {
 }
 
 impl Cell {
-    pub fn check_neighbours(&mut self, weapon: &mut Projectile) {
-        for item in self {}
+    pub fn check_neighbours(
+        &mut self,
+        soldiers: &mut Collection<Soldier>,
+        weapon: &mut Projectile,
+    ) {
+        for inhabitant in &self.habitants {
+            let Inhabitants::Soldiers(index) = inhabitant else {
+                continue;
+            };
+            let Some(Some(soldier)) = soldiers.items.get_mut(*index) else {
+                continue;
+            };
+            if weapon.hitbox.intersects(soldier.hitbox()) {
+                soldier.take_damage(weapon.damage());
+            }
+        }
     }
 }
 
@@ -60,7 +75,7 @@ impl Grid {
             cells,
         }
     }
-    pub fn get_cell(&self, position: &Vector2) -> Option<&Cell> {
+    pub fn get_cell(&mut self, position: &Vector2) -> Option<&mut Cell> {
         if !position.x.is_finite()
             || !position.y.is_finite()
             || position.x < 0.0
@@ -72,6 +87,6 @@ impl Grid {
         let collum = (position.x / CELL_SIZE as f32).floor() as usize;
         let row = (position.y / CELL_SIZE as f32).floor() as usize;
 
-        self.cells.get(row * self.collums + collum)
+        self.cells.get_mut(row * self.collums + collum)
     }
 }

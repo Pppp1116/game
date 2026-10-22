@@ -7,9 +7,18 @@ use crate::{
     traits::{TakeDamage, WorldObject},
 };
 
+#[derive(Debug)]
 pub struct Collection<T: WorldObject> {
     pub items: Vec<Option<T>>,
     pub free_list: Vec<usize>,
+}
+impl<T: WorldObject> Default for Collection<T> {
+    fn default() -> Self {
+        Self {
+            items: Vec::new(),
+            free_list: Vec::new(),
+        }
+    }
 }
 
 impl<'a, T: WorldObject> IntoIterator for &'a Collection<T> {
@@ -40,8 +49,22 @@ pub struct World {
     pub projectiles: Collection<Projectile>,
     pub grid: Grid,
 }
+impl World {
+    pub fn push<T: WorldObject>(&mut self, object: T) {
+        T::storage(self).items.push(Some(object));
+    }
+}
 
 impl World {
+    pub fn new(window_x: i32, widow_y: i32) -> World {
+        let grid = Grid::init(window_x as usize, widow_y as usize);
+
+        World {
+            soldiers: Collection::default(),
+            projectiles: Collection::default(),
+            grid,
+        }
+    }
     fn remove<T: WorldObject>(&mut self, index: usize) -> Option<()> {
         let collection = T::storage(self);
 
@@ -64,11 +87,12 @@ impl World {
             Some(index)
         }
     }
-    fn check_bullet_colision(&mut self) {
+    pub fn check_bullet_colision(&mut self) {
         for projectile in &mut self.projectiles {
-            let Some(grid) = self.grid.get_grid(&projectile.position) else {
+            let Some(cell) = self.grid.get_cell(&projectile.hitbox.position) else {
                 continue;
             };
+            cell.check_neighbours(&mut self.soldiers, projectile);
         }
     }
 }

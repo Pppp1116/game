@@ -1,4 +1,5 @@
 use crate::health::Health;
+use crate::hitbox::HitBox;
 use crate::projectile::Projectile;
 use crate::soldiers::Weapon;
 use crate::world::Collection;
@@ -11,7 +12,7 @@ pub trait Draw {
 
 pub trait Movable {
     fn move_by(&mut self, ammount: Vector2);
-    fn velocity(&self) -> Vector2;
+    fn velocity(&self) -> &Vector2;
 }
 
 pub trait WorldObject: Sized {
@@ -19,21 +20,22 @@ pub trait WorldObject: Sized {
 }
 
 pub trait TakeDamage {
-    fn position(&self) -> Vector2;
+    fn hitbox(&self) -> &HitBox;
     fn health(&mut self) -> &mut Health;
+    fn take_damage(&mut self, damage: f32);
 }
 
 pub trait Armed: TakeDamage + Movable {
     fn shoot_at<T: TakeDamage>(&mut self, target: &T) -> Option<Projectile> {
-        if self.in_range(target.position()) && self.weapon().can_shoot() {
+        if self.in_range(&target.hitbox()) && self.weapon().can_shoot() {
             match self.mut_weapon() {
                 Weapon::Grenade { last_shot, .. } | Weapon::Gun { last_shot, .. } => {
                     *last_shot = Instant::now();
                 }
             }
             return Some(Projectile::new(
-                self.position(),
-                target.position(),
+                self.hitbox().clone(),
+                target.hitbox().clone(),
                 self.weapon(),
             ));
         }
@@ -41,7 +43,7 @@ pub trait Armed: TakeDamage + Movable {
     }
     fn weapon(&self) -> &Weapon;
     fn mut_weapon(&mut self) -> &mut Weapon;
-    fn in_range(&self, target: Vector2) -> bool {
-        self.position().distance_sqr(target) <= self.weapon().reatch().powi(2)
+    fn in_range(&self, target: &HitBox) -> bool {
+        self.hitbox().position.distance_sqr(target.position) <= self.weapon().reatch().powi(2)
     }
 }

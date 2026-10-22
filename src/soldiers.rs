@@ -1,3 +1,4 @@
+use crate::hitbox::HitBox;
 use crate::world::{Collection, World};
 use crate::{
     health::Health,
@@ -14,7 +15,7 @@ enum SoldierState {
 }
 
 pub struct Soldier {
-    position: Vector2,
+    hitbox: HitBox,
     health: Health,
     gun: Weapon,
     state: SoldierState,
@@ -67,15 +68,14 @@ impl Weapon {
         }
     }
 }
-impl Movable for Weapon {}
 
 impl Draw for Soldier {
     fn draw(&self, d: &mut RaylibDrawHandle<'_>) {
         const SIZE: i32 = 32;
         const CORNER: i32 = 7;
 
-        let x = self.position.x as i32;
-        let y = self.position.y as i32;
+        let x = self.hitbox.position.x as i32;
+        let y = self.hitbox.position.y as i32;
 
         d.draw_rectangle(x, y, SIZE as i32, SIZE as i32, Color::GREEN);
 
@@ -98,7 +98,7 @@ impl Armed for Soldier {
 }
 
 impl Soldier {
-    pub fn new(position: Vector2) -> Self {
+    pub fn new(hitbox: HitBox) -> Self {
         const SOLDIER_HEALTH: f32 = 300.0;
         Self {
             gun: Weapon::Gun {
@@ -107,7 +107,7 @@ impl Soldier {
                 last_shot: Instant::now(),
                 fire_interval: Duration::from_millis(500),
             },
-            position,
+            hitbox,
             health: Health::new(SOLDIER_HEALTH),
             state: SoldierState::Idle,
         }
@@ -115,12 +115,11 @@ impl Soldier {
 }
 impl Movable for Soldier {
     fn move_by(&mut self, ammount: Vector2) {
-        self.position.x -= ammount.x;
-        self.position.y -= ammount.y;
+        self.hitbox.position.x -= ammount.x;
+        self.hitbox.position.y -= ammount.y;
     }
-    fn move_to(&mut self, position: Vector2) {
-        self.position.x = position.x;
-        self.position.y = position.y;
+    fn velocity(&self) -> &Vector2 {
+        &self.hitbox.velocity
     }
 }
 
@@ -128,7 +127,10 @@ impl TakeDamage for Soldier {
     fn health(&mut self) -> &mut Health {
         &mut self.health
     }
-    fn position(&self) -> Vector2 {
-        self.position
+    fn hitbox(&self) -> &HitBox {
+        &self.hitbox
+    }
+    fn take_damage(&mut self, damage: f32) {
+        self.health.current -= damage;
     }
 }
