@@ -1,10 +1,12 @@
 use crate::hitbox::HitBox;
+use crate::traits::Draw;
 use crate::{
     soldiers::Weapon,
     traits::{Movable, WorldObject},
     world::Collection,
 };
 use raylib::ffi::Vector2;
+use raylib::prelude::*;
 
 pub(crate) struct Projectile {
     pub hitbox: HitBox,
@@ -49,6 +51,12 @@ impl WorldObject for Projectile {
     fn storage(world: &mut crate::world::World) -> &mut Collection<Self> {
         &mut world.projectiles
     }
+    fn position(&self) -> Vector2 {
+        self.hitbox.position
+    }
+    fn inhabitant(index: usize) -> crate::grid::Inhabitants {
+        crate::grid::Inhabitants::Pojectiles(index)
+    }
 }
 
 impl Movable for Projectile {
@@ -57,5 +65,17 @@ impl Movable for Projectile {
     }
     fn velocity(&self) -> &Vector2 {
         &self.velocity
+    }
+}
+
+impl Draw for Projectile {
+    fn draw(&self, d: &mut raylib::prelude::RaylibDrawHandle<'_>) {
+        d.draw_rectangle(
+            self.hitbox.position.x as i32,
+            self.hitbox.position.y as i32,
+            2,
+            2,
+            Color::ORANGE,
+        );
     }
 }

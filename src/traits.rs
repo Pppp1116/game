@@ -1,3 +1,4 @@
+use crate::grid::Inhabitants;
 use crate::health::Health;
 use crate::hitbox::HitBox;
 use crate::projectile::Projectile;
@@ -17,6 +18,8 @@ pub trait Movable {
 
 pub trait WorldObject: Sized {
     fn storage(world: &mut World) -> &mut Collection<Self>;
+    fn position(&self) -> Vector2;
+    fn inhabitant(index: usize) -> Inhabitants;
 }
 
 pub trait TakeDamage {

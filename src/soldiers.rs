@@ -1,3 +1,4 @@
+use crate::grid::Inhabitants;
 use crate::hitbox::HitBox;
 use crate::world::{Collection, World};
 use crate::{
@@ -7,6 +8,7 @@ use crate::{
 use raylib::prelude::*;
 use std::time::{Duration, Instant};
 
+#[derive(Clone)]
 enum SoldierState {
     Fighthing,
     TakingCover,
@@ -14,6 +16,7 @@ enum SoldierState {
     Healing,
 }
 
+#[derive(Clone)]
 pub struct Soldier {
     hitbox: HitBox,
     health: Health,
@@ -23,6 +26,14 @@ pub struct Soldier {
 impl WorldObject for Soldier {
     fn storage(world: &mut World) -> &mut Collection<Self> {
         &mut world.soldiers
+    }
+
+    fn inhabitant(index: usize) -> crate::grid::Inhabitants {
+        Inhabitants::Soldiers(index)
+    }
+
+    fn position(&self) -> Vector2 {
+        self.hitbox.position
     }
 }
 

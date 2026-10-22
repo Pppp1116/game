@@ -1,9 +1,9 @@
 use game::hitbox::HitBox;
 use game::soldiers::Soldier;
-use game::traits::Draw;
 use game::world::World;
 use raylib::consts::MouseButton;
-use raylib::prelude::Vector2;
+use raylib::drawing::RaylibDraw;
+use raylib::ffi::Color;
 
 fn main() {
     let (mut rl, thread) = raylib::init().size(640, 480).title("Hello, World").build();
@@ -18,10 +18,14 @@ fn main() {
 
             let hitbox = HitBox::new(mouse);
             let soldier = Soldier::new(hitbox);
+
             world.push(soldier);
         }
         //check bullet collision
         world.check_bullet_colision();
+
         let mut d = rl.begin_drawing(&thread);
+        d.clear_background(Color::BLACK);
+        world.draw(&mut d);
     }
 }

@@ -15,9 +15,13 @@ pub(crate) enum Inhabitants {
 
 #[derive(Default, Clone)]
 pub(crate) struct Cell {
-    habitants: Vec<Inhabitants>,
+    pub(crate) habitants: Vec<Inhabitants>,
 }
-
+impl Cell {
+    pub fn insert(&mut self, inhabitant: Inhabitants) {
+        self.habitants.push(inhabitant);
+    }
+}
 impl<'a> IntoIterator for &'a Cell {
     type Item = &'a Inhabitants;
     type IntoIter = std::slice::Iter<'a, Inhabitants>;
@@ -40,7 +44,8 @@ impl Cell {
         &mut self,
         soldiers: &mut Collection<Soldier>,
         weapon: &mut Projectile,
-    ) {
+    ) -> bool {
+        let mut hit = false;
         for inhabitant in &self.habitants {
             let Inhabitants::Soldiers(index) = inhabitant else {
                 continue;
@@ -50,8 +55,10 @@ impl Cell {
             };
             if weapon.hitbox.intersects(soldier.hitbox()) {
                 soldier.take_damage(weapon.damage());
+                hit = true;
             }
         }
+        hit
     }
 }
 

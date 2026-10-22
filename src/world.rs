@@ -1,10 +1,12 @@
 use std::{marker::PhantomData, ops::Index};
 
+use raylib::drawing::RaylibDrawHandle;
+
 use crate::{
     grid::Grid,
     projectile::Projectile,
     soldiers::Soldier,
-    traits::{TakeDamage, WorldObject},
+    traits::{Draw, TakeDamage, WorldObject},
 };
 
 #[derive(Debug)]
@@ -50,8 +52,15 @@ pub struct World {
     pub grid: Grid,
 }
 impl World {
-    pub fn push<T: WorldObject>(&mut self, object: T) {
-        T::storage(self).items.push(Some(object));
+    pub fn push<T: WorldObject + Clone>(&mut self, object: T) {
+        let position = object.position();
+
+        let Some(index) = self.add(object) else {
+            return;
+        };
+        if let Some(cell) = self.grid.get_cell(&position) {
+            cell.insert(T::inhabitant(index));
+        }
     }
 }
 
@@ -88,11 +97,31 @@ impl World {
         }
     }
     pub fn check_bullet_colision(&mut self) {
-        for projectile in &mut self.projectiles {
+        for (index, slot) in &mut self.projectiles.items.iter_mut().enumerate() {
+            let Some(projectile) = slot.as_mut() else {
+                continue;
+            };
+
             let Some(cell) = self.grid.get_cell(&projectile.hitbox.position) else {
                 continue;
             };
-            cell.check_neighbours(&mut self.soldiers, projectile);
+            if cell.check_neighbours(&mut self.soldiers, projectile) {
+                if let Some(pos) = cell.habitants.iter().position(|inhabitants| matches!(inhabitants, crate::grid::Inhabitants::Pojectiles(i) if *i == index) ){
+                    cell.habitants.swap_remove(pos);
+                };
+
+                //TODO maybe this should be a method
+                *slot = None;
+                self.projectiles.free_list.push(index);
+            }
+        }
+    }
+    pub fn draw(&self, rl: &mut RaylibDrawHandle<'_>) {
+        for soldiers in &self.soldiers {
+            soldiers.draw(rl);
+        }
+        for projectile in &self.projectiles {
+            projectile.draw(rl);
         }
     }
 }
