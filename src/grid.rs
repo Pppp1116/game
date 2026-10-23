@@ -8,18 +8,28 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub(crate) enum Inhabitants {
+pub enum Inhabitants {
     Soldiers(usize),
-    Pojectiles(usize),
+    Projectiles(usize),
 }
 
 #[derive(Default, Clone)]
-pub(crate) struct Cell {
+pub struct Cell {
     pub(crate) habitants: Vec<Inhabitants>,
 }
 impl Cell {
     pub fn insert(&mut self, inhabitant: Inhabitants) {
         self.habitants.push(inhabitant);
+    }
+
+    pub(crate) fn remove_projectile(&mut self, index: usize) {
+        if let Some(position) = self
+            .habitants
+            .iter()
+            .position(|inhabitant| matches!(inhabitant, Inhabitants::Projectiles(i) if *i == index))
+        {
+            self.habitants.swap_remove(position);
+        }
     }
 }
 impl<'a> IntoIterator for &'a Cell {
@@ -94,6 +104,26 @@ impl Grid {
         let collum = (position.x / CELL_SIZE as f32).floor() as usize;
         let row = (position.y / CELL_SIZE as f32).floor() as usize;
 
+        if collum >= self.collums || row >= self.rows {
+            return None;
+        }
+
         self.cells.get_mut(row * self.collums + collum)
+    }
+    pub fn overlapping(
+        &self,
+        position: &Vector2,
+        distance: f32,
+    ) -> impl Iterator<Item = &Cell> + '_ {
+        let size = CELL_SIZE as f32;
+
+        let min_x = ((position.x - distance).max(0.0) / size) as usize;
+        let max_x = (((position.x + distance) / size) as usize).min(self.collums - 1);
+
+        let min_y = ((position.y - distance).max(0.0) / size) as usize;
+        let max_y = (((position.y + distance) / size) as usize).min(self.rows - 1);
+
+        (min_y..=max_y)
+            .flat_map(move |y| (min_x..=max_x).map(move |x| &self.cells[y * self.collums + x]))
     }
 }

@@ -3,7 +3,7 @@ use game::soldiers::Soldier;
 use game::world::World;
 use raylib::consts::MouseButton;
 use raylib::drawing::RaylibDraw;
-use raylib::ffi::Color;
+use raylib::ffi::{Color, Vector2};
 
 fn main() {
     let (mut rl, thread) = raylib::init().size(640, 480).title("Hello, World").build();
@@ -12,20 +12,21 @@ fn main() {
     let width = rl.get_screen_width();
     let mut world = World::new(width, height);
 
+    let soldier_size = Vector2::new(20.0, 20.0);
+
     while !rl.window_should_close() {
         if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
             let mouse = rl.get_mouse_position();
 
-            let hitbox = HitBox::new(mouse);
+            let hitbox = HitBox::new(mouse, soldier_size);
             let soldier = Soldier::new(hitbox);
 
             world.push(soldier);
         }
-        //check bullet collision
-        world.check_bullet_colision();
-
+        let dt = rl.get_frame_time();
         let mut d = rl.begin_drawing(&thread);
+
         d.clear_background(Color::BLACK);
-        world.draw(&mut d);
+        world.update(dt, &mut d);
     }
 }

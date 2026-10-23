@@ -1,3 +1,4 @@
+use crate::fov::Fov;
 use crate::grid::Inhabitants;
 use crate::health::Health;
 use crate::hitbox::HitBox;
@@ -25,12 +26,23 @@ pub trait WorldObject: Sized {
 pub trait TakeDamage {
     fn hitbox(&self) -> &HitBox;
     fn health(&mut self) -> &mut Health;
+    fn fov(&self) -> &Fov;
     fn take_damage(&mut self, damage: f32);
 }
 
 pub trait Armed: TakeDamage + Movable {
     fn shoot_at<T: TakeDamage>(&mut self, target: &T) -> Option<Projectile> {
-        if self.in_range(&target.hitbox()) && self.weapon().can_shoot() {
+        //check if shooter is not the same as the target
+        if std::ptr::addr_eq(self, target) {
+            return None;
+        }
+
+        if self.in_range(&target.hitbox())
+            && self.weapon().can_shoot()
+            && self
+                .fov()
+                .is_in_fov(&self.hitbox().position, &target.hitbox().position)
+        {
             match self.mut_weapon() {
                 Weapon::Grenade { last_shot, .. } | Weapon::Gun { last_shot, .. } => {
                     *last_shot = Instant::now();

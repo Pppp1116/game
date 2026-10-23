@@ -1,3 +1,4 @@
+use crate::fov::Fov;
 use crate::grid::Inhabitants;
 use crate::hitbox::HitBox;
 use crate::world::{Collection, World};
@@ -21,6 +22,7 @@ pub struct Soldier {
     hitbox: HitBox,
     health: Health,
     gun: Weapon,
+    fov: Fov,
     state: SoldierState,
 }
 impl WorldObject for Soldier {
@@ -82,20 +84,14 @@ impl Weapon {
 
 impl Draw for Soldier {
     fn draw(&self, d: &mut RaylibDrawHandle<'_>) {
-        const SIZE: i32 = 32;
-        const CORNER: i32 = 7;
-
         let x = self.hitbox.position.x as i32;
         let y = self.hitbox.position.y as i32;
+        let width = self.hitbox.size.x as i32;
+        let height = self.hitbox.size.y as i32;
 
-        d.draw_rectangle(x, y, SIZE as i32, SIZE as i32, Color::GREEN);
+        const HELMET_GREEN: Color = Color::new(75, 83, 32, 255);
 
-        let dark = Color::DARKGREEN;
-
-        d.draw_rectangle(x, y, CORNER, CORNER, dark);
-        d.draw_rectangle(x + SIZE - CORNER, y, CORNER, CORNER, dark);
-        d.draw_rectangle(x, y + SIZE - CORNER, CORNER, CORNER, dark);
-        d.draw_rectangle(x + SIZE - CORNER, y + SIZE - CORNER, CORNER, CORNER, dark);
+        d.draw_rectangle(x, y, width, height, HELMET_GREEN);
     }
 }
 
@@ -111,6 +107,8 @@ impl Armed for Soldier {
 impl Soldier {
     pub fn new(hitbox: HitBox) -> Self {
         const SOLDIER_HEALTH: f32 = 300.0;
+
+        let fov = Fov::new(200.0, 120.0);
         Self {
             gun: Weapon::Gun {
                 damage: 10.0,
@@ -118,6 +116,7 @@ impl Soldier {
                 last_shot: Instant::now(),
                 fire_interval: Duration::from_millis(500),
             },
+            fov,
             hitbox,
             health: Health::new(SOLDIER_HEALTH),
             state: SoldierState::Idle,
@@ -143,5 +142,8 @@ impl TakeDamage for Soldier {
     }
     fn take_damage(&mut self, damage: f32) {
         self.health.current -= damage;
+    }
+    fn fov(&self) -> &Fov {
+        &self.fov
     }
 }
