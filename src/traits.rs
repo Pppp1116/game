@@ -3,6 +3,7 @@ use crate::grid::Inhabitants;
 use crate::health::Health;
 use crate::hitbox::HitBox;
 use crate::projectile::Projectile;
+use crate::soldiers::State;
 use crate::soldiers::Weapon;
 use crate::world::Collection;
 use crate::world::World;
@@ -48,6 +49,8 @@ pub trait Armed: TakeDamage + Movable {
                     *last_shot = Instant::now();
                 }
             }
+            *self.state() = State::Fighthing;
+
             return Some(Projectile::new(
                 self.hitbox().clone(),
                 target.hitbox().clone(),
@@ -61,4 +64,5 @@ pub trait Armed: TakeDamage + Movable {
     fn in_range(&self, target: &HitBox) -> bool {
         self.hitbox().position.distance_sqr(target.position) <= self.weapon().reatch().powi(2)
     }
+    fn state(&mut self) -> &mut State;
 }

@@ -10,7 +10,7 @@ use raylib::prelude::*;
 use std::time::{Duration, Instant};
 
 #[derive(Clone)]
-enum SoldierState {
+pub enum State {
     Fighthing,
     TakingCover,
     Idle,
@@ -23,7 +23,7 @@ pub struct Soldier {
     health: Health,
     gun: Weapon,
     fov: Fov,
-    state: SoldierState,
+    state: State,
 }
 impl WorldObject for Soldier {
     fn storage(world: &mut World) -> &mut Collection<Self> {
@@ -102,6 +102,9 @@ impl Armed for Soldier {
     fn mut_weapon(&mut self) -> &mut Weapon {
         &mut self.gun
     }
+    fn state(&mut self) -> &mut State {
+        &mut self.state
+    }
 }
 
 impl Soldier {
@@ -119,7 +122,7 @@ impl Soldier {
             fov,
             hitbox,
             health: Health::new(SOLDIER_HEALTH),
-            state: SoldierState::Idle,
+            state: State::Idle,
         }
     }
 }
@@ -145,5 +148,19 @@ impl TakeDamage for Soldier {
     }
     fn fov(&self) -> &Fov {
         &self.fov
+    }
+}
+
+impl Soldier {
+    fn action(&mut self) {
+        let health = self.health.current / self.health.max;
+
+        let fight = health;
+        let cover = 1.0 - health;
+
+        //TODO call this continue state machine and find better formula
+        if rand::random::<f32>() * (fight + cover) < cover {
+            State::TakingCover;
+        }
     }
 }

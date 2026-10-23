@@ -1,7 +1,7 @@
 #[derive(Clone, Debug)]
 pub struct Health {
     pub current: f32,
-    max: f32,
+    pub max: f32,
 }
 
 impl Health {
