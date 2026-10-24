@@ -1,13 +1,8 @@
 use raylib::ffi::Vector2;
 
-use crate::{
-    projectile::{self, Projectile},
-    soldiers::{Soldier, Weapon},
-    traits::{TakeDamage, WorldObject},
-    world::{Collection, World},
-};
+use crate::{projectile::Projectile, soldiers::Soldier, traits::TakeDamage, world::Collection};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Inhabitants {
     Soldiers(usize),
     Projectiles(usize),
@@ -22,13 +17,9 @@ impl Cell {
         self.habitants.push(inhabitant);
     }
 
-    pub(crate) fn remove_projectile(&mut self, index: usize) {
-        if let Some(position) = self
-            .habitants
-            .iter()
-            .position(|inhabitant| matches!(inhabitant, Inhabitants::Projectiles(i) if *i == index))
-        {
-            self.habitants.swap_remove(position);
+    pub fn remove_inhabitant(&mut self, inhabitant: &Inhabitants) {
+        if let Some(index) = self.habitants.iter().position(|x| x == inhabitant) {
+            self.habitants.swap_remove(index);
         }
     }
 }
@@ -53,9 +44,10 @@ impl Cell {
     pub fn check_neighbours(
         &mut self,
         soldiers: &mut Collection<Soldier>,
-        weapon: &mut Projectile,
-    ) -> bool {
+        projectile: &mut Projectile,
+    ) -> (bool, Option<usize>) {
         let mut hit = false;
+        let mut killed_index = None;
         for inhabitant in &self.habitants {
             let Inhabitants::Soldiers(index) = inhabitant else {
                 continue;
@@ -63,12 +55,18 @@ impl Cell {
             let Some(Some(soldier)) = soldiers.items.get_mut(*index) else {
                 continue;
             };
-            if weapon.hitbox.intersects(soldier.hitbox()) {
-                soldier.take_damage(weapon.damage());
+            if projectile
+                .hitbox
+                .intersects(projectile.previus_position, soldier.hitbox())
+            {
+                if soldier.take_damage(projectile.damage()) {
+                    killed_index = Some(*index);
+                }
+
                 hit = true;
             }
         }
-        hit
+        (hit, killed_index)
     }
 }
 

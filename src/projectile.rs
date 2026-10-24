@@ -11,6 +11,7 @@ use raylib::prelude::*;
 #[derive(Clone)]
 pub struct Projectile {
     pub hitbox: HitBox,
+    pub previus_position: Vector2,
     pub velocity: Vector2,
     wepond: Weapon,
 }
@@ -44,19 +45,20 @@ impl Projectile {
         } else {
             Vector2::new(1.0, 0.0)
         };
-        let muzzle_distance =
-            (from.size.x.hypot(from.size.y) + size.x.hypot(size.y)) * 0.5 + 1.0;
+        let muzzle_distance = (from.size.x.hypot(from.size.y) + size.x.hypot(size.y)) * 0.5 + 1.0;
         let position = from_center + direction * muzzle_distance - size * 0.5;
         let hitbox = HitBox::new(position, size);
 
         //TODO diff speed for diff weaponds
         Self {
+            previus_position: position,
             hitbox: hitbox,
             velocity: direction * PROJECTILE_SPEED,
             wepond: weapond.clone(),
         }
     }
     pub fn update(&mut self, dt: f32) {
+        self.previus_position = self.hitbox.position;
         self.hitbox.position += self.velocity * dt;
     }
 }

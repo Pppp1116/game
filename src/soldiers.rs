@@ -143,8 +143,9 @@ impl TakeDamage for Soldier {
     fn hitbox(&self) -> &HitBox {
         &self.hitbox
     }
-    fn take_damage(&mut self, damage: f32) {
+    fn take_damage(&mut self, damage: f32) -> bool {
         self.health.current -= damage;
+        self.health.current <= 0.0
     }
     fn fov(&self) -> &Fov {
         &self.fov

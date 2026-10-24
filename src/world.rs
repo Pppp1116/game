@@ -10,11 +10,14 @@ use crate::{
 #[derive(Debug)]
 pub struct Collection<T: WorldObject> {
     pub items: Vec<Option<T>>,
+    //generations is a custom index to identify the soldiers
+    generations: Vec<usize>,
     free_list: Vec<usize>,
 }
 impl<T: WorldObject> Default for Collection<T> {
     fn default() -> Self {
         Self {
+            generations: Vec::new(),
             items: Vec::new(),
             free_list: Vec::new(),
         }
@@ -72,44 +75,60 @@ impl World {
             grid,
         }
     }
-    fn remove<T: WorldObject>(&mut self, index: usize) -> Option<()> {
-        let collection = T::storage(self);
-
-        if collection.items.get_mut(index)?.take().is_some() {
+    pub fn remove<T: WorldObject>(&mut self, index: usize) -> Option<()> {
+        let position = {
+            let collection = T::storage(self);
+            let object = collection.items.get_mut(index)?.take()?;
             collection.free_list.push(index);
-            Some(())
-        } else {
-            None
+            object.position()
+        };
+
+        if let Some(cell) = self.grid.get_cell(&position) {
+            cell.remove_inhabitant(&T::inhabitant(index));
         }
+
+        Some(())
     }
     fn add<T: WorldObject>(&mut self, object: T) -> Option<usize> {
         let collection = T::storage(self);
 
         if let Some(index) = collection.free_list.pop() {
             *collection.items.get_mut(index)? = Some(object);
+            if let Some(value) = collection.generations.get_mut(index) {
+                *value += 1;
+            };
             Some(index)
         } else {
             let index = collection.items.len();
             collection.items.push(Some(object));
+            collection.generations.insert(index, 1);
             Some(index)
         }
     }
     fn check_bullet_colision(&mut self) {
-        for (index, slot) in &mut self.projectiles.items.iter_mut().enumerate() {
-            let Some(projectile) = slot.as_mut() else {
-                continue;
-            };
+        for index in 0..self.projectiles.items.len() {
+            let result = {
+                let Some(projectile) = self.projectiles.items[index].as_mut() else {
+                    continue;
+                };
+                let position = projectile.hitbox.position;
 
-            let Some(cell) = self.grid.get_cell(&projectile.hitbox.position) else {
-                continue;
+                let Some(cell) = self.grid.get_cell(&position) else {
+                    continue;
+                };
+                cell.check_neighbours(&mut self.soldiers, projectile)
             };
-            if cell.check_neighbours(&mut self.soldiers, projectile) {
-                cell.remove_projectile(index);
-                *slot = None;
-                self.projectiles.free_list.push(index);
+            let (hit, dead_soldier) = result;
+
+            if let Some(soldier_index) = dead_soldier {
+                self.remove::<Soldier>(soldier_index);
+            }
+            if hit {
+                self.remove::<Projectile>(index);
             }
         }
     }
+
     fn move_projectiles(&mut self, dt: f32) {
         for (index, slot) in self.projectiles.items.iter_mut().enumerate() {
             let Some(projectile) = slot.as_mut() else {
@@ -117,7 +136,7 @@ impl World {
             };
 
             if let Some(cell) = self.grid.get_cell(&projectile.hitbox.position) {
-                cell.remove_projectile(index);
+                cell.remove_inhabitant(&Inhabitants::Projectiles(index));
             }
 
             projectile.update(dt);
@@ -191,8 +210,14 @@ impl World {
 #[cfg(test)]
 mod tests {
     use raylib::math::Vector2;
+    use std::time::{Duration, Instant};
 
-    use crate::{hitbox::HitBox, soldiers::Soldier};
+    use crate::{
+        grid::Inhabitants,
+        hitbox::HitBox,
+        projectile::Projectile,
+        soldiers::{Soldier, Weapon},
+    };
 
     use super::World;
 
@@ -207,5 +232,33 @@ mod tests {
         world.update_shooting();
 
         assert!(world.projectiles.items.is_empty());
+    }
+
+    #[test]
+    fn moving_projectile_keeps_soldier_in_cell() {
+        let mut world = World::new(200, 200);
+        let soldier_hitbox = HitBox::new(Vector2::new(10.0, 10.0), Vector2::new(20.0, 20.0));
+        let target_hitbox = HitBox::new(Vector2::new(90.0, 10.0), Vector2::new(20.0, 20.0));
+        let weapon = Weapon::Gun {
+            damage: 10.0,
+            reatch: 100.0,
+            last_shot: Instant::now(),
+            fire_interval: Duration::from_millis(500),
+        };
+        let projectile = Projectile::new(soldier_hitbox.clone(), target_hitbox, &weapon);
+
+        world.push(Soldier::new(soldier_hitbox));
+        world.push(projectile);
+        world.move_projectiles(0.01);
+
+        let cell = world.grid.get_cell(&Vector2::new(10.0, 10.0)).unwrap();
+        assert_eq!(cell.habitants.len(), 2);
+        assert!(cell.habitants.contains(&Inhabitants::Soldiers(0)));
+        assert!(cell.habitants.contains(&Inhabitants::Projectiles(0)));
+    }
+
+    #[test]
+    fn soldier_index() {
+        let mut word = World::new(200, 200);
     }
 }

@@ -28,7 +28,7 @@ pub trait TakeDamage {
     fn hitbox(&self) -> &HitBox;
     fn health(&mut self) -> &mut Health;
     fn fov(&self) -> &Fov;
-    fn take_damage(&mut self, damage: f32);
+    fn take_damage(&mut self, damage: f32) -> bool;
 }
 
 pub trait Armed: TakeDamage + Movable {
